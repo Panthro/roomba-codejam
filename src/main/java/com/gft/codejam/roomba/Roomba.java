@@ -4,6 +4,8 @@ import robocode.*;
 
 import java.util.ArrayList;
 
+import static robocode.util.Utils.normalRelativeAngleDegrees;
+
 
 /**
  * Created by panthro on 22/06/2017.
@@ -32,6 +34,8 @@ public class Roomba extends Robot {
 
     public void onScannedRobot(ScannedRobotEvent e) {
 
+        double enemyPreviusEnergy;
+
         /*   ScannedRobotEvent Info:
              double	getBearing()
              double	getBearingRadians()
@@ -42,24 +46,37 @@ public class Roomba extends Robot {
              double getVelocity()
          */
 
+        if(scannedContainer.isEmpty()){
+            enemyPreviusEnergy = 100;
+        }else {
+            enemyPreviusEnergy = scannedContainer.get(scannedContainer.size()-1).getEnergy();
+        }
+
         this.scannedContainer.add(e);
         printScannedRobotEvent(e);
 
         // TODO: Improve bug when changing directions that produces a full weapon turn
         // Lock enemy tank (almost 99% times)
-        double gunTurnAmount  = getHeading() - getGunHeading() + e.getBearing();
+        double gunTurnAmount  = normalRelativeAngleDegrees((getHeading() + e.getBearing()) - this.getGunHeading());
 
-        if(gunTurnAmount == 360 || gunTurnAmount == -360) {
-            gunTurnAmount = 0;
-        }
-        if(e.getBearing() < 0){
-            gunTurnAmount += 360;
-        }
         turnGunRight(gunTurnAmount);
-
         out.println("{gunAmountTurn: " + gunTurnAmount + "}");
 
         fireByDistance(e.getDistance());
+
+        if(enemyPreviusEnergy < e.getEnergy()){
+            String log = "";
+            log += "Energy { " +
+                "enemyPreviusEnergy: " + enemyPreviusEnergy + "," +
+                "e.getEnergy(): " + e.getEnergy() + "," +
+                "Distance: " + e.getBearing() + "}";
+            out.println(log);
+
+            if(e.getBearing() > 0)
+                back(200);
+            else
+                ahead(200);
+        }
 
         // Call scan again, before we turn the gun
         scan();
@@ -69,11 +86,11 @@ public class Roomba extends Robot {
     Basic FireByDistance method */
     private void fireByDistance(double distance){
 
-        if(distance < 100) {
+        if(distance < 200) {
             fire(3);
-        } else if (distance < 200 ) {
+        } else if (distance < 400 ) {
             fire(2);
-        } else if (distance < 300 ) {
+        } else if (distance < 600 ) {
             fire(1);
         } else {
             fire(.5);
@@ -94,6 +111,11 @@ public class Roomba extends Robot {
             "Velocity: " + e.getVelocity() + "}";
 
         out.println(log);
+    }
+
+    public void onHitWall(HitWallEvent e){
+        out.println("{HitWall e.getBearing(): " + e.getBearing() + "}");
+        turnRight(90);
     }
 
     public void onHitByBullet(HitByBulletEvent e) {
