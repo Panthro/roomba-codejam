@@ -12,11 +12,13 @@ import static robocode.util.Utils.normalRelativeAngleDegrees;
  */
 public class Roomba extends Robot {
 
-    //Variables for future use
+    private boolean moveForward = true;
+    private boolean log = true;
+
+    //Variables for future use: Disabled
     public ArrayList<BulletHitEvent> bulletHitInfoContainer;
     public ArrayList<HitByBulletEvent> hitByBullerContainer;
     public ArrayList<ScannedRobotEvent> scannedContainer;
-
 
     public void run() {
         ConfigureStartingMatch();
@@ -46,38 +48,58 @@ public class Roomba extends Robot {
              double getVelocity()
          */
 
+        //Check previus enemy tank energy
         if(scannedContainer.isEmpty()){
             enemyPreviusEnergy = 100;
         }else {
             enemyPreviusEnergy = scannedContainer.get(scannedContainer.size()-1).getEnergy();
         }
-
         this.scannedContainer.add(e);
-        printScannedRobotEvent(e);
+        if(log) {
+           printScannedRobotEvent(e);
+        };
 
-        // TODO: Improve bug when changing directions that produces a full weapon turn
-        // Lock enemy tank (almost 99% times)
-        double gunTurnAmount  = normalRelativeAngleDegrees((getHeading() + e.getBearing()) - this.getGunHeading());
+        if(enemyPreviusEnergy > e.getEnergy()){
+             if(log) {
+                 String log = "";
+                 log += "Energy { " +
+                     "enemyPreviusEnergy: " + enemyPreviusEnergy + "," +
+                     "e.getEnergy(): " + e.getEnergy() + "," +
+                     "Distance: " + e.getBearing() + "}";
+                 out.println(log);
+             }
 
-        turnGunRight(gunTurnAmount);
-        out.println("{gunAmountTurn: " + gunTurnAmount + "}");
-
-        fireByDistance(e.getDistance());
-
-        if(enemyPreviusEnergy < e.getEnergy()){
-            String log = "";
-            log += "Energy { " +
-                "enemyPreviusEnergy: " + enemyPreviusEnergy + "," +
-                "e.getEnergy(): " + e.getEnergy() + "," +
-                "Distance: " + e.getBearing() + "}";
-            out.println(log);
-
-            if(e.getBearing() > 0)
-                back(200);
-            else
-                ahead(200);
+             if(moveForward){
+                 ahead(100);
+             }else{
+                 back( 100);
+             }
         }
 
+        // Lock enemy tank (almost 99% times)
+        // TODO: Improve this methd using predictive shooting
+        double gunTurnAmount = normalRelativeAngleDegrees((getHeading() + e.getBearing()) - this.getGunHeading());
+
+        turnGunRight(gunTurnAmount);
+
+        if(log) {
+            out.println("{gunAmountTurn: " + gunTurnAmount + "}");
+        }
+
+
+
+        // TODO: Improve this method using distance and our tank energy
+        // Fire enemy by distance
+        fireByDistance(e.getDistance());
+
+        /*if(moveForward){
+            ahead(25);
+        }else{
+            back( 25);
+        }*/
+
+        //Be at 90º of enemy
+        turnRight(normalRelativeAngleDegrees(e.getBearing()) + 90);
         // Call scan again, before we turn the gun
         scan();
     }
@@ -85,8 +107,11 @@ public class Roomba extends Robot {
     /* TODO: Improve this
     Basic FireByDistance method */
     private void fireByDistance(double distance){
-
-        if(distance < 200) {
+        if(distance < 25) {
+            fire(10);
+        } else if (distance < 50) {
+            fire(5);
+        } else if (distance < 200) {
             fire(3);
         } else if (distance < 400 ) {
             fire(2);
@@ -95,13 +120,12 @@ public class Roomba extends Robot {
         } else {
             fire(.5);
         }
-
     }
 
     private void printScannedRobotEvent(ScannedRobotEvent e){
-        String log = "";
+        String logTxt = "";
 
-        log += "ScannedRobotEvent { " +
+        logTxt += "ScannedRobotEvent { " +
             "Bearing: " + e.getBearing() + "," +
             "BearingRads: " + e.getBearingRadians() + "," +
             "Distance: " + e.getBearing() + "," +
@@ -110,16 +134,21 @@ public class Roomba extends Robot {
             "HeadingRads: " + e.getHeadingRadians() + "," +
             "Velocity: " + e.getVelocity() + "}";
 
-        out.println(log);
+        if(log) {
+            out.println(logTxt);
+        }
     }
 
     public void onHitWall(HitWallEvent e){
-        out.println("{HitWall e.getBearing(): " + e.getBearing() + "}");
-        turnRight(90);
+        if(log) {
+            out.println("{HitWall e.getBearing(): " + e.getBearing() + "}");
+        }
+        //turnRight(90);
+        moveForward = !moveForward;
     }
 
     public void onHitByBullet(HitByBulletEvent e) {
-
+        //turnGunRight(45);
         //Logs Event
         //this.hitByBullerContainer.add(e);
         //out.println(e.toString());
@@ -133,7 +162,6 @@ public class Roomba extends Robot {
             double getPower;
             double getVelocity;
          */
-
     }
 
 
