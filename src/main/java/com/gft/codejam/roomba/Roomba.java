@@ -13,9 +13,11 @@ import static robocode.util.Utils.normalRelativeAngleDegrees;
 public class Roomba extends Robot {
 
     private boolean moveForward = true;
-    private boolean log = true;
+    private double lastBulletHitEnergy = 0.0;
+    private boolean log = false;
 
-    //Variables for future use: Disabled
+    //Variables for future use:
+    //TODO: We should improve this. Over-storage of information
     public ArrayList<BulletHitEvent> bulletHitInfoContainer;
     public ArrayList<HitByBulletEvent> hitByBullerContainer;
     public ArrayList<ScannedRobotEvent> scannedContainer;
@@ -48,78 +50,66 @@ public class Roomba extends Robot {
              double getVelocity()
          */
 
-        //Check previus enemy tank energy
+        //Check previous enemy tank energy in order to detect
         if(scannedContainer.isEmpty()){
             enemyPreviusEnergy = 100;
-        }else {
+        }else if (lastBulletHitEnergy > 0) {
+            //When we hit, we lower energy, we should take into account this
+            enemyPreviusEnergy = lastBulletHitEnergy;
+        } else {
             enemyPreviusEnergy = scannedContainer.get(scannedContainer.size()-1).getEnergy();
+            lastBulletHitEnergy = 0;
         }
         this.scannedContainer.add(e);
         if(log) {
-           printScannedRobotEvent(e);
-        };
-
-        if(enemyPreviusEnergy > e.getEnergy()){
-             if(log) {
-                 String log = "";
-                 log += "Energy { " +
-                     "enemyPreviusEnergy: " + enemyPreviusEnergy + "," +
-                     "e.getEnergy(): " + e.getEnergy() + "," +
-                     "Distance: " + e.getBearing() + "}";
-                 out.println(log);
-             }
-
-             if(moveForward){
-                 ahead(100);
-             }else{
-                 back( 100);
-             }
+            printScannedRobotEvent(e);
         }
 
+        // bulletPower
+        double bulletPower = Math.min(782 / e.getDistance(), 3);
+        //Predicted time:
+        long time = (long)(e.getDistance() / (20 - bulletPower * 3)); //Defaults: bulletSpeed = 20 - bulletPower * 3;
+        out.println(" >>> {time: " + time + "}");
+
         // Lock enemy tank (almost 99% times)
-        // TODO: Improve this methd using predictive shooting
-        double gunTurnAmount = normalRelativeAngleDegrees((getHeading() + e.getBearing()) - this.getGunHeading());
-
+        // TODO: Improve this method using predictive shooting
+        double gunTurnAmount = normalRelativeAngleDegrees((getHeading() + e.getBearing() + (time * e.getVelocity() / 20)) - this.getGunHeading());
         turnGunRight(gunTurnAmount);
-
         if(log) {
             out.println("{gunAmountTurn: " + gunTurnAmount + "}");
         }
 
-
-
-        // TODO: Improve this method using distance and our tank energy
-        // Fire enemy by distance
-        fireByDistance(e.getDistance());
-
-        /*if(moveForward){
-            ahead(25);
-        }else{
-            back( 25);
-        }*/
+        // TODO: Improve this method using better predictive enemy future position
+        // Fire enemy tank
+        if(log) {
+            out.println("{bulletPower: " + bulletPower + "}");
+        }
+        fire(bulletPower);
 
         //Be at 90º of enemy
         turnRight(normalRelativeAngleDegrees(e.getBearing()) + 90);
-        // Call scan again, before we turn the gun
-        scan();
-    }
 
-    /* TODO: Improve this
-    Basic FireByDistance method */
-    private void fireByDistance(double distance){
-        if(distance < 25) {
-            fire(10);
-        } else if (distance < 50) {
-            fire(5);
-        } else if (distance < 200) {
-            fire(3);
-        } else if (distance < 400 ) {
-            fire(2);
-        } else if (distance < 600 ) {
-            fire(1);
-        } else {
-            fire(.5);
+        //Avoid enemy shoots
+        if(enemyPreviusEnergy > e.getEnergy()){
+            if(log) {
+                String log = "";
+                log += "Energy { " +
+                    "enemyPreviusEnergy: " + enemyPreviusEnergy + "," +
+                    "e.getEnergy(): " + e.getEnergy() + "," +
+                    "Distance: " + e.getBearing() + "}";
+                out.println(log);
+            }
+
+            //Try to avoid enemy fire
+            if(moveForward){
+                ahead(100);
+            }else{
+                back( 100);
+            }
         }
+
+        // Call scan again
+        scan();
     }
 
     private void printScannedRobotEvent(ScannedRobotEvent e){
@@ -143,15 +133,16 @@ public class Roomba extends Robot {
         if(log) {
             out.println("{HitWall e.getBearing(): " + e.getBearing() + "}");
         }
-        //turnRight(90);
         moveForward = !moveForward;
     }
 
     public void onHitByBullet(HitByBulletEvent e) {
-        //turnGunRight(45);
         //Logs Event
         //this.hitByBullerContainer.add(e);
         //out.println(e.toString());
+
+        //When we are hit by bullet, we cannot use last bullet energy as the enemy tank regenerates energy
+        lastBulletHitEnergy = 0;
         /*
             double getBearing;
             double getBearingRadians;
@@ -166,11 +157,11 @@ public class Roomba extends Robot {
 
 
     public void onBulletHit(BulletHitEvent e) {
-
         //Logs Event
         //this.bulletHitInfoContainer.add(e);
         //out.println(e.toString());
-
+        //When we hit a tank with a bullet, we reduce enemy max energy.
+        lastBulletHitEnergy = e.getEnergy();
         /*
             Bullet getBullet();
             double getEnergy();
@@ -184,5 +175,4 @@ public class Roomba extends Robot {
         this.hitByBullerContainer = new ArrayList<HitByBulletEvent>();
         this.scannedContainer = new ArrayList<ScannedRobotEvent>();
     }
-
 }
