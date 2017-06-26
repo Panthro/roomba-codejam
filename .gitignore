@@ -26,3 +26,9 @@ hs_err_pid*
 
 
 target/
+copy-robot.sh
+
+#auto battle
+/bin
+battle.battle
+battle_result.txt
