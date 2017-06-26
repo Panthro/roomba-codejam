@@ -1,2 +1,25 @@
+env:
+  matrix:
+    - ENEMY=sample.Corners
+    - ENEMY=sample.Crazy
+    - ENEMY=sample.Fire
+    - ENEMY=sample.Interactive
+    - ENEMY=sample.Interactive_v2
+    - ENEMY=sample.MyFirstJuniorRobot
+    - ENEMY=sample.MyFirstRobot
+    - ENEMY=sample.PaintingRobot
+    - ENEMY=sample.RamFire
+    - ENEMY=sample.SittingDuck
+    - ENEMY=sample.SpinBot
+    - ENEMY=sample.Target
+    - ENEMY=sample.TrackFire
+    - ENEMY=sample.Tracker
+    - ENEMY=sample.VelociRobot
+    - ENEMY=sample.Walls
+
+install: true # skip mvn install
+
 language: java
-script: mvn clean verify
+script:
+  - mvn clean verify
+  - ./run-sample-battle.sh $ENEMY

@@ -1,8 +1,13 @@
 package com.gft.codejam.roomba;
 
-import robocode.*;
+import robocode.BulletHitEvent;
+import robocode.HitByBulletEvent;
+import robocode.HitWallEvent;
+import robocode.Robot;
+import robocode.ScannedRobotEvent;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static robocode.util.Utils.normalRelativeAngleDegrees;
 
@@ -12,33 +17,47 @@ import static robocode.util.Utils.normalRelativeAngleDegrees;
  */
 public class Roomba extends Robot {
 
+    private static final int FULL_TURN = 360;
+    private static final int INITIAL_ENERGY = 100;
+    private static final int MIN_POSSIBLE_ENERGY = 0;
+    private static final int BULLET_POWER_DIVISOR = 782;
+    private static final int MAX_BULLET_POWER = 3;
+    private static final String logPattern = ""; // --- put here a string that will be used to filter the log TODO maybe a regex?
     private boolean moveForward = true;
     private double lastBulletHitEnergy = 0.0;
-    private boolean log = false;
+    private boolean logEnabled = true;
 
     //Variables for future use:
     //TODO: We should improve this. Over-storage of information
-    public ArrayList<BulletHitEvent> bulletHitInfoContainer;
-    public ArrayList<HitByBulletEvent> hitByBullerContainer;
-    public ArrayList<ScannedRobotEvent> scannedContainer;
+//    private ArrayList<BulletHitEvent> bulletHitInfoContainer;
+//    private ArrayList<HitByBulletEvent> hitByBullerContainer;
+    private List<ScannedRobotEvent> scannedContainer = new ArrayList<ScannedRobotEvent>();
 
     public void run() {
-        ConfigureStartingMatch();
 
         turnLeft(getHeading());
 
         setAdjustRadarForRobotTurn(true);
 
-        while(true) {
+        while (true) {
             //Radar FailSafe
-            turnRadarRight(360);
+            turnRadarRight(FULL_TURN);
         }
     }
 
+    private void log(String message) {
+        if (message.contains(logPattern)) {
+            out.println(message);
+        }
+    }
+
+    private double getMaxBulletPower() {
+        return MAX_BULLET_POWER; //TODO should we calculate this based on energy?
+    }
 
     public void onScannedRobot(ScannedRobotEvent e) {
 
-        double enemyPreviusEnergy;
+        double enemyPreviousEnergy;
 
         /*   ScannedRobotEvent Info:
              double	getBearing()
@@ -51,38 +70,39 @@ public class Roomba extends Robot {
          */
 
         //Check previous enemy tank energy in order to detect
-        if(scannedContainer.isEmpty()){
-            enemyPreviusEnergy = 100;
-        }else if (lastBulletHitEnergy > 0) {
+        if (scannedContainer.isEmpty()) {
+            enemyPreviousEnergy = INITIAL_ENERGY; //TODO check if this constant is actually a constant
+        } else if (lastBulletHitEnergy > MIN_POSSIBLE_ENERGY) {
             //When we hit, we lower energy, we should take into account this
-            enemyPreviusEnergy = lastBulletHitEnergy;
+            enemyPreviousEnergy = lastBulletHitEnergy;
+            lastBulletHitEnergy = MIN_POSSIBLE_ENERGY;
         } else {
-            enemyPreviusEnergy = scannedContainer.get(scannedContainer.size()-1).getEnergy();
-            lastBulletHitEnergy = 0;
+            enemyPreviousEnergy = scannedContainer.get(scannedContainer.size() - 1).getEnergy();
+            lastBulletHitEnergy = MIN_POSSIBLE_ENERGY;
         }
         this.scannedContainer.add(e);
-        if(log) {
+        if (logEnabled) {
             printScannedRobotEvent(e);
         }
 
         // bulletPower
-        double bulletPower = Math.min(782 / e.getDistance(), 3);
+        double bulletPower = Math.min(BULLET_POWER_DIVISOR / e.getDistance(), getMaxBulletPower());
         //Predicted time:
-        long time = (long)(e.getDistance() / (20 - bulletPower * 3)); //Defaults: bulletSpeed = 20 - bulletPower * 3;
-        out.println(" >>> {time: " + time + "}");
+        long time = (long) (e.getDistance() / (20 - bulletPower * 3)); //Defaults: bulletSpeed = 20 - bulletPower * 3;
+        log(" >>> {time: " + time + "}");
 
         // Lock enemy tank (almost 99% times)
         // TODO: Improve this method using predictive shooting
         double gunTurnAmount = normalRelativeAngleDegrees((getHeading() + e.getBearing() + (time * e.getVelocity() / 20)) - this.getGunHeading());
         turnGunRight(gunTurnAmount);
-        if(log) {
-            out.println("{gunAmountTurn: " + gunTurnAmount + "}");
+        if (logEnabled) {
+            log("{gunAmountTurn: " + gunTurnAmount + "}");
         }
 
         // TODO: Improve this method using better predictive enemy future position
         // Fire enemy tank
-        if(log) {
-            out.println("{bulletPower: " + bulletPower + "}");
+        if (logEnabled) {
+            log("{bulletPower: " + bulletPower + "}");
         }
         fire(bulletPower);
 
@@ -90,21 +110,21 @@ public class Roomba extends Robot {
         turnRight(normalRelativeAngleDegrees(e.getBearing()) + 90);
 
         //Avoid enemy shoots
-        if(enemyPreviusEnergy > e.getEnergy()){
-            if(log) {
+        if (enemyPreviousEnergy > e.getEnergy()) {
+            if (logEnabled) {
                 String log = "";
                 log += "Energy { " +
-                    "enemyPreviusEnergy: " + enemyPreviusEnergy + "," +
+                    "enemyPreviousEnergy: " + enemyPreviousEnergy + "," +
                     "e.getEnergy(): " + e.getEnergy() + "," +
                     "Distance: " + e.getBearing() + "}";
-                out.println(log);
+                log(log);
             }
 
             //Try to avoid enemy fire
-            if(moveForward){
+            if (moveForward) {
                 ahead(100);
-            }else{
-                back( 100);
+            } else {
+                back(100);
             }
         }
 
@@ -112,26 +132,24 @@ public class Roomba extends Robot {
         scan();
     }
 
-    private void printScannedRobotEvent(ScannedRobotEvent e){
-        String logTxt = "";
+    private void printScannedRobotEvent(ScannedRobotEvent e) {
 
-        logTxt += "ScannedRobotEvent { " +
-            "Bearing: " + e.getBearing() + "," +
-            "BearingRads: " + e.getBearingRadians() + "," +
-            "Distance: " + e.getBearing() + "," +
-            "Energy: " + e.getBearing() + "," +
-            "Heading: " + e.getBearing() + "," +
-            "HeadingRads: " + e.getHeadingRadians() + "," +
-            "Velocity: " + e.getVelocity() + "}";
-
-        if(log) {
-            out.println(logTxt);
+        if (logEnabled) {
+            String logTxt = String.format("ScannedRobotEvent { Bearing: %s,BearingRads: %s,Distance: %s,Energy: %s,Heading: %s,HeadingRads: %s,Velocity: %s}",
+                e.getBearing(),
+                e.getBearingRadians(),
+                e.getBearing(),
+                e.getBearing(),
+                e.getBearing(),
+                e.getHeadingRadians(),
+                e.getVelocity());
+            log(logTxt);
         }
     }
 
-    public void onHitWall(HitWallEvent e){
-        if(log) {
-            out.println("{HitWall e.getBearing(): " + e.getBearing() + "}");
+    public void onHitWall(HitWallEvent e) {
+        if (logEnabled) {
+            log("{HitWall e.getBearing(): " + e.getBearing() + "}");
         }
         moveForward = !moveForward;
     }
@@ -139,10 +157,10 @@ public class Roomba extends Robot {
     public void onHitByBullet(HitByBulletEvent e) {
         //Logs Event
         //this.hitByBullerContainer.add(e);
-        //out.println(e.toString());
+        //log(e.toString());
 
         //When we are hit by bullet, we cannot use last bullet energy as the enemy tank regenerates energy
-        lastBulletHitEnergy = 0;
+        lastBulletHitEnergy = MIN_POSSIBLE_ENERGY;
         /*
             double getBearing;
             double getBearingRadians;
@@ -159,7 +177,7 @@ public class Roomba extends Robot {
     public void onBulletHit(BulletHitEvent e) {
         //Logs Event
         //this.bulletHitInfoContainer.add(e);
-        //out.println(e.toString());
+        //log(e.toString());
         //When we hit a tank with a bullet, we reduce enemy max energy.
         lastBulletHitEnergy = e.getEnergy();
         /*
@@ -169,10 +187,4 @@ public class Roomba extends Robot {
         */
     }
 
-
-    private void ConfigureStartingMatch() {
-        this.bulletHitInfoContainer = new ArrayList<BulletHitEvent>();
-        this.hitByBullerContainer = new ArrayList<HitByBulletEvent>();
-        this.scannedContainer = new ArrayList<ScannedRobotEvent>();
-    }
 }
