@@ -17,6 +17,8 @@ env:
     - ENEMY=sample.VelociRobot
     - ENEMY=sample.Walls
 
+install: true # skip mvn install
+
 language: java
 script:
   - mvn clean verify
