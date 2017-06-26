@@ -1,7 +1,9 @@
 env:
-  - MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
-  - ENEMY=sample.Crazy
-  - ENEMY=sample.Walls
+  global:
+    - MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+  matrix:
+    - ENEMY=sample.Crazy
+    - ENEMY=sample.Walls
 language: java
 script:
   - mvn clean verify
