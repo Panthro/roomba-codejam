@@ -1,2 +1,7 @@
+env:
+  - ENEMY=sample.Crazy
+  - ENEMY=sample.Walls
 language: java
-script: mvn clean verify
+script:
+  - mvn clean verify
+  - ./run-sample-battle.sh $ROBOT
