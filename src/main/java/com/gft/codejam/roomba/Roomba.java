@@ -17,14 +17,15 @@ import static robocode.util.Utils.normalRelativeAngleDegrees;
  */
 public class Roomba extends Robot {
 
-    public static final int FULL_TURN = 360;
-    public static final int INITIAL_ENERGY = 100;
-    public static final int MIN_POSSIBLE_ENERGY = 0;
-    public static final int BULLET_POWER_DIVISOR = 782;
-    public static final int MAX_BULLET_POWER = 3;
+    private static final int FULL_TURN = 360;
+    private static final int INITIAL_ENERGY = 100;
+    private static final int MIN_POSSIBLE_ENERGY = 0;
+    private static final int BULLET_POWER_DIVISOR = 782;
+    private static final int MAX_BULLET_POWER = 3;
+    private static final String logPattern = ""; // --- put here a string that will be used to filter the log TODO maybe a regex?
     private boolean moveForward = true;
     private double lastBulletHitEnergy = 0.0;
-    private boolean logEnabled = false;
+    private boolean logEnabled = true;
 
     //Variables for future use:
     //TODO: We should improve this. Over-storage of information
@@ -45,9 +46,14 @@ public class Roomba extends Robot {
     }
 
     private void log(String message) {
-        out.println(message);
+        if (message.contains(logPattern)) {
+            out.println(message);
+        }
     }
 
+    private double getMaxBulletPower() {
+        return MAX_BULLET_POWER; //TODO should we calculate this based on energy?
+    }
 
     public void onScannedRobot(ScannedRobotEvent e) {
 
@@ -80,9 +86,9 @@ public class Roomba extends Robot {
         }
 
         // bulletPower
-        double bulletPower = Math.min(BULLET_POWER_DIVISOR / e.getDistance(), MAX_BULLET_POWER);
+        double bulletPower = Math.min(BULLET_POWER_DIVISOR / e.getDistance(), getMaxBulletPower());
         //Predicted time:
-        long time = (long) (e.getDistance() / (20 - bulletPower * MAX_BULLET_POWER)); //Defaults: bulletSpeed = 20 - bulletPower * 3; //TODO check this is actually equals max bullet power
+        long time = (long) (e.getDistance() / (20 - bulletPower * 3)); //Defaults: bulletSpeed = 20 - bulletPower * 3;
         log(" >>> {time: " + time + "}");
 
         // Lock enemy tank (almost 99% times)
