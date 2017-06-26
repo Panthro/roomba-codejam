@@ -21,5 +21,5 @@ install: true # skip mvn install
 
 language: java
 script:
-  - mvn clean verify
+  - mvn -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true clean compile
   - ./run-sample-battle.sh $ENEMY
