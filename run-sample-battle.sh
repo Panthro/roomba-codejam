@@ -5,7 +5,7 @@ ROBOCODE_VERSION="1.9.2.6"
 JAR_NAME="robocode-${ROBOCODE_VERSION}-setup.jar"
 
 
-if [ ! -d bin ]; then
+if [ ! -f bin/robocode.sh ]; then
     wget "https://netcologne.dl.sourceforge.net/project/robocode/robocode/${ROBOCODE_VERSION}/${JAR_NAME}"
     mkdir bin
     unzip -o ${JAR_NAME} -d bin

@@ -19,7 +19,8 @@ env:
 
 cache:
   directories:
-  - bin
+    - bin
+    - $HOME/.m2
 
 install: true # skip mvn install
 
