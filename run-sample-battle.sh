@@ -4,20 +4,15 @@ ROBOCODE_VERSION="1.9.2.6"
 
 JAR_NAME="robocode-${ROBOCODE_VERSION}-setup.jar"
 
-rm robocode-*setup.jar
 
-wget "https://netcologne.dl.sourceforge.net/project/robocode/robocode/${ROBOCODE_VERSION}/${JAR_NAME}"
-
-rm -rf bin
-
-mkdir bin
-
-unzip -o ${JAR_NAME} -d bin
+if [ ! -d bin ]; then
+    wget "https://netcologne.dl.sourceforge.net/project/robocode/robocode/${ROBOCODE_VERSION}/${JAR_NAME}"
+    mkdir bin
+    unzip -o ${JAR_NAME} -d bin
+    chmod +x ./bin/*.sh
+fi
 
 cp -R target/classes/* bin/robots/
-
-chmod +x ./bin/*.sh
-
 
 sed -e "s/\${robot}/$1/" ./battles/sample.battle > battle.battle
 
