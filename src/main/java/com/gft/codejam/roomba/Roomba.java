@@ -20,7 +20,7 @@ public class Roomba extends Robot {
     private static final int FULL_TURN = 360;
     private static final int INITIAL_ENERGY = 100;
     private static final int MIN_POSSIBLE_ENERGY = 0;
-    private static final int BULLET_POWER_DIVISOR = 782;
+    private static final int BULLET_POWER_DIVISOR = 500;
     private static final int MAX_BULLET_POWER = 3;
     private static final String logPattern = ""; // --- put here a string that will be used to filter the log TODO maybe a regex?
     private boolean moveForward = true;
@@ -32,6 +32,7 @@ public class Roomba extends Robot {
 //    private ArrayList<BulletHitEvent> bulletHitInfoContainer;
 //    private ArrayList<HitByBulletEvent> hitByBullerContainer;
     private List<ScannedRobotEvent> scannedContainer = new ArrayList<ScannedRobotEvent>();
+    private long lastHitWallTime = 0;
 
     public void run() {
 
@@ -46,8 +47,10 @@ public class Roomba extends Robot {
     }
 
     private void log(String message) {
-        if (message.contains(logPattern)) {
-            out.println(message);
+        if (logEnabled) {
+            if (message.contains(logPattern)) {
+                out.println(message);
+            }
         }
     }
 
@@ -69,6 +72,7 @@ public class Roomba extends Robot {
              double getVelocity()
          */
 
+
         //Check previous enemy tank energy in order to detect
         if (scannedContainer.isEmpty()) {
             enemyPreviousEnergy = INITIAL_ENERGY; //TODO check if this constant is actually a constant
@@ -81,77 +85,100 @@ public class Roomba extends Robot {
             lastBulletHitEnergy = MIN_POSSIBLE_ENERGY;
         }
         this.scannedContainer.add(e);
-        if (logEnabled) {
-            printScannedRobotEvent(e);
-        }
+
+        printScannedRobotEvent(e);
+
 
         // bulletPower
         double bulletPower = Math.min(BULLET_POWER_DIVISOR / e.getDistance(), getMaxBulletPower());
-        //Predicted time:
-        long time = (long) (e.getDistance() / (20 - bulletPower * 3)); //Defaults: bulletSpeed = 20 - bulletPower * 3;
-        log(" >>> {time: " + time + "}");
+        double velocityPrediction = 0;
+
+        if(e.getVelocity() >= 6) {
+            //Predicted time:
+            long time = (long) (e.getDistance() / (20 - bulletPower * 3)); //Defaults: bulletSpeed = 20 - bulletPower * 3;
+            log(" >>> {time: " + time + "}");
+            velocityPrediction = (time * e.getVelocity() / 20);
+            //The turning rate of the gun measured in degrees, which is 20 degrees/turn
+            //The maximum turning rate of the robot, in degrees, which is 10 degress/turn.
+        }
 
         // Lock enemy tank (almost 99% times)
         // TODO: Improve this method using predictive shooting
-        double gunTurnAmount = normalRelativeAngleDegrees((getHeading() + e.getBearing() + (time * e.getVelocity() / 20)) - this.getGunHeading());
+        double gunTurnAmount = normalRelativeAngleDegrees((getHeading() + e.getBearing() + velocityPrediction) - this.getGunHeading());
         turnGunRight(gunTurnAmount);
-        if (logEnabled) {
-            log("{gunAmountTurn: " + gunTurnAmount + "}");
-        }
+
+        fire(bulletPower);
+
+
+        log("{getBearing: " + e.getBearing() + "}");
+
+        log("{gunAmountTurn: " + gunTurnAmount + "}");
+
 
         // TODO: Improve this method using better predictive enemy future position
         // Fire enemy tank
-        if (logEnabled) {
-            log("{bulletPower: " + bulletPower + "}");
-        }
-        fire(bulletPower);
+        log("{bulletPower: " + bulletPower + "}");
 
         //Be at 90º of enemy
-        turnRight(normalRelativeAngleDegrees(e.getBearing()) + 90);
+        turnRight(normalRelativeAngleDegrees(e.getBearing()) + 75);
 
         //Avoid enemy shoots
         if (enemyPreviousEnergy > e.getEnergy()) {
-            if (logEnabled) {
-                String log = "";
-                log += "Energy { " +
-                    "enemyPreviousEnergy: " + enemyPreviousEnergy + "," +
-                    "e.getEnergy(): " + e.getEnergy() + "," +
-                    "Distance: " + e.getBearing() + "}";
-                log(log);
+            String log = "";
+            log += "Energy { " +
+                "enemyPreviousEnergy: " + enemyPreviousEnergy + "," +
+                "e.getEnergy(): " + e.getEnergy() + "," +
+                "Distance: " + e.getBearing() + "}";
+            log(log);
+
+            if (Math.abs(e.getDistance()) <= 300) {
+                back(50);
+            } else {
+                ahead(50);
             }
 
-            //Try to avoid enemy fire
-            if (moveForward) {
-                ahead(100);
-            } else {
-                back(100);
-            }
         }
 
         // Call scan again
-        scan();
+        //scan();
+    }
+
+    private void move() {
+        //Try to avoid enemy fire
+        if (moveForward) {
+            ahead(100);
+        } else {
+            back(100);
+        }
     }
 
     private void printScannedRobotEvent(ScannedRobotEvent e) {
 
-        if (logEnabled) {
-            String logTxt = String.format("ScannedRobotEvent { Bearing: %s,BearingRads: %s,Distance: %s,Energy: %s,Heading: %s,HeadingRads: %s,Velocity: %s}",
-                e.getBearing(),
-                e.getBearingRadians(),
-                e.getBearing(),
-                e.getBearing(),
-                e.getBearing(),
-                e.getHeadingRadians(),
-                e.getVelocity());
-            log(logTxt);
-        }
+        String logTxt = String.format("ScannedRobotEvent { Bearing: %s,BearingRads: %s,Distance: %s,Energy: %s,Heading: %s,HeadingRads: %s,Velocity: %s}",
+            e.getBearing(),
+            e.getBearingRadians(),
+            e.getBearing(),
+            e.getBearing(),
+            e.getBearing(),
+            e.getHeadingRadians(),
+            e.getVelocity());
+        log(logTxt);
+
     }
 
     public void onHitWall(HitWallEvent e) {
-        if (logEnabled) {
-            log("{HitWall e.getBearing(): " + e.getBearing() + "}");
+        log("{HitWall e.getBearing(): " + e.getBearing() + "}");
+        log("{HitWall getTime() =" + getTime());
+
+
+        if (getTime() - lastHitWallTime < 150) { // -> means the robot has hit the wall twice
+            turnRight(e.getBearing());
         }
+
+        lastHitWallTime = getTime();
+
         moveForward = !moveForward;
+        move();
     }
 
     public void onHitByBullet(HitByBulletEvent e) {
