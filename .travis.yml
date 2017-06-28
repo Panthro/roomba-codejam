@@ -19,7 +19,7 @@ env:
 
 cache:
   directories:
-    - bin
+    - robocode
     - $HOME/.m2
 
 install: true # skip mvn install
