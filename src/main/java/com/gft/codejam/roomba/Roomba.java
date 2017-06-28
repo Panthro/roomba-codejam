@@ -20,7 +20,7 @@ public class Roomba extends Robot {
     private static final int FULL_TURN = 360;
     private static final int INITIAL_ENERGY = 100;
     private static final int MIN_POSSIBLE_ENERGY = 0;
-    private static final int BULLET_POWER_DIVISOR = 782;
+    private static final int BULLET_POWER_DIVISOR = 500;
     private static final int MAX_BULLET_POWER = 3;
     private static final String logPattern = ""; // --- put here a string that will be used to filter the log TODO maybe a regex?
     private boolean moveForward = true;
@@ -93,11 +93,13 @@ public class Roomba extends Robot {
         double bulletPower = Math.min(BULLET_POWER_DIVISOR / e.getDistance(), getMaxBulletPower());
         double velocityPrediction = 0;
 
-        if(e.getVelocity() >= 2) {
+        if(e.getVelocity() >= 6) {
             //Predicted time:
             long time = (long) (e.getDistance() / (20 - bulletPower * 3)); //Defaults: bulletSpeed = 20 - bulletPower * 3;
             log(" >>> {time: " + time + "}");
             velocityPrediction = (time * e.getVelocity() / 20);
+            //The turning rate of the gun measured in degrees, which is 20 degrees/turn
+            //The maximum turning rate of the robot, in degrees, which is 10 degress/turn.
         }
 
         // Lock enemy tank (almost 99% times)
@@ -118,7 +120,7 @@ public class Roomba extends Robot {
         log("{bulletPower: " + bulletPower + "}");
 
         //Be at 90º of enemy
-        turnRight(normalRelativeAngleDegrees(e.getBearing()) + 90);
+        turnRight(normalRelativeAngleDegrees(e.getBearing()) + 75);
 
         //Avoid enemy shoots
         if (enemyPreviousEnergy > e.getEnergy()) {
@@ -129,13 +131,16 @@ public class Roomba extends Robot {
                 "Distance: " + e.getBearing() + "}";
             log(log);
 
-            move();
-
+            if (Math.abs(e.getDistance()) <= 300) {
+                back(50);
+            } else {
+                ahead(50);
+            }
 
         }
 
         // Call scan again
-        scan();
+        //scan();
     }
 
     private void move() {
