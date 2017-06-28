@@ -2,26 +2,21 @@
 
 ROBOCODE_VERSION="1.9.2.6"
 
-JAR_NAME="robocode-${ROBOCODE_VERSION}-setup.jar"
 
-rm robocode-*setup.jar
+if [ ! -f robocode/robocode.sh ]; then
 
-wget "https://netcologne.dl.sourceforge.net/project/robocode/robocode/${ROBOCODE_VERSION}/${JAR_NAME}"
+    JAR_NAME="robocode-${ROBOCODE_VERSION}-setup.jar"
+    wget "https://netcologne.dl.sourceforge.net/project/robocode/robocode/${ROBOCODE_VERSION}/${JAR_NAME}"
+    mkdir robocode
+    unzip -o ${JAR_NAME} -d robocode
+    chmod +x ./robocode/*.sh
+fi
 
-rm -rf bin
-
-mkdir bin
-
-unzip -o ${JAR_NAME} -d bin
-
-cp -R target/classes/* bin/robots/
-
-chmod +x ./bin/*.sh
-
+cp -R target/classes/* robocode/robots/
 
 sed -e "s/\${robot}/$1/" ./battles/sample.battle > battle.battle
 
-sh -c "./bin/robocode.sh -battle ../battle.battle -nodisplay -nosound" > battle_result.txt
+sh -c "./robocode/robocode.sh -battle ../battle.battle -nodisplay -nosound" > battle_result.txt
 
 cat battle_result.txt
 
