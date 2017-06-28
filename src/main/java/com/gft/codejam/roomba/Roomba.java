@@ -22,7 +22,7 @@ public class Roomba extends Robot {
     private static final int MIN_POSSIBLE_ENERGY = 0;
     private static final int BULLET_POWER_DIVISOR = 782;
     private static final int MAX_BULLET_POWER = 3;
-    private static final String logPattern = ""; // --- put here a string that will be used to filter the log TODO maybe a regex?
+    private static final String logPattern = "getBearing"; // --- put here a string that will be used to filter the log TODO maybe a regex?
     private boolean moveForward = true;
     private double lastBulletHitEnergy = 0.0;
     private boolean logEnabled = true;
@@ -87,14 +87,26 @@ public class Roomba extends Robot {
 
         // bulletPower
         double bulletPower = Math.min(BULLET_POWER_DIVISOR / e.getDistance(), getMaxBulletPower());
-        //Predicted time:
-        long time = (long) (e.getDistance() / (20 - bulletPower * 3)); //Defaults: bulletSpeed = 20 - bulletPower * 3;
-        log(" >>> {time: " + time + "}");
+        double velocityPrediction = 0;
+
+        if(e.getVelocity() >= 2) {
+            //Predicted time:
+            long time = (long) (e.getDistance() / (20 - bulletPower * 3)); //Defaults: bulletSpeed = 20 - bulletPower * 3;
+            log(" >>> {time: " + time + "}");
+            velocityPrediction = (time * e.getVelocity() / 20);
+        }
 
         // Lock enemy tank (almost 99% times)
         // TODO: Improve this method using predictive shooting
-        double gunTurnAmount = normalRelativeAngleDegrees((getHeading() + e.getBearing() + (time * e.getVelocity() / 20)) - this.getGunHeading());
+        double gunTurnAmount = normalRelativeAngleDegrees((getHeading() + e.getBearing() + velocityPrediction) - this.getGunHeading());
         turnGunRight(gunTurnAmount);
+
+        fire(bulletPower);
+
+        if (logEnabled) {
+            log("{getBearing: " + e.getBearing() + "}");
+        }
+
         if (logEnabled) {
             log("{gunAmountTurn: " + gunTurnAmount + "}");
         }
@@ -104,7 +116,7 @@ public class Roomba extends Robot {
         if (logEnabled) {
             log("{bulletPower: " + bulletPower + "}");
         }
-        fire(bulletPower);
+
 
         //Be at 90º of enemy
         turnRight(normalRelativeAngleDegrees(e.getBearing()) + 90);
