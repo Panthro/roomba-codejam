@@ -6,6 +6,7 @@ import robocode.HitWallEvent;
 import robocode.Robot;
 import robocode.ScannedRobotEvent;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +36,9 @@ public class Roomba extends Robot {
     private long lastHitWallTime = 0;
 
     public void run() {
+
+
+        setColors(Color.BLACK, Color.RED, Color.WHITE);
 
         turnLeft(getHeading());
 
@@ -93,7 +97,7 @@ public class Roomba extends Robot {
         double bulletPower = Math.min(BULLET_POWER_DIVISOR / e.getDistance(), getMaxBulletPower());
         double velocityPrediction = 0;
 
-        if(e.getVelocity() >= 6) {
+        if (e.getVelocity() >= 6) {
             //Predicted time:
             long time = (long) (e.getDistance() / (20 - bulletPower * 3)); //Defaults: bulletSpeed = 20 - bulletPower * 3;
             log(" >>> {time: " + time + "}");
